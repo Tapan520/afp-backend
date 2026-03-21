@@ -2,6 +2,9 @@ const router = require('express').Router();
 const { query } = require('../db/pool');
 const { auth, adminOnly } = require('../middleware/auth');
 
+// Only super_admin can view/add/edit/delete shops
+const superAdminOnly = adminOnly(['super_admin']);
+
 const SHOP_SELECT = `
   SELECT s.*,
     w.ward_number,
@@ -13,8 +16,8 @@ const SHOP_SELECT = `
   LEFT JOIN cities c ON c.id = s.city_id
 `;
 
-// GET /api/shops?cityId=1&q=Paws
-router.get('/', auth, async (req, res) => {
+// GET /api/shops?cityId=1&q=Paws  — super_admin only
+router.get('/', auth, superAdminOnly, async (req, res) => {
   try {
     const { cityId, q = '' } = req.query;
     const like = `%${q}%`;
@@ -30,8 +33,8 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// GET /api/shops/:id
-router.get('/:id', auth, async (req, res) => {
+// GET /api/shops/:id  — super_admin only
+router.get('/:id', auth, superAdminOnly, async (req, res) => {
   try {
     const { rows } = await query(`${SHOP_SELECT} WHERE s.id=$1`, [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'Shop not found' });
@@ -41,8 +44,8 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
-// POST /api/shops  — admin adds a shop
-router.post('/', auth, adminOnly(), async (req, res) => {
+// POST /api/shops  — super_admin only
+router.post('/', auth, superAdminOnly, async (req, res) => {
   try {
     const { name, ownerName, address, mobile, email,
       wardId, nigamId, cityId, timings, speciality } = req.body;
@@ -62,8 +65,8 @@ router.post('/', auth, adminOnly(), async (req, res) => {
   }
 });
 
-// PUT /api/shops/:id
-router.put('/:id', auth, adminOnly(), async (req, res) => {
+// PUT /api/shops/:id  — super_admin only
+router.put('/:id', auth, superAdminOnly, async (req, res) => {
   try {
     const { name, ownerName, address, mobile, email, timings, speciality, isActive } = req.body;
     const { rows } = await query(
@@ -80,8 +83,8 @@ router.put('/:id', auth, adminOnly(), async (req, res) => {
   }
 });
 
-// DELETE /api/shops/:id
-router.delete('/:id', auth, adminOnly(), async (req, res) => {
+// DELETE /api/shops/:id  — super_admin only
+router.delete('/:id', auth, superAdminOnly, async (req, res) => {
   try {
     await query('UPDATE food_shops SET is_active=false WHERE id=$1', [req.params.id]);
     res.json({ success: true });

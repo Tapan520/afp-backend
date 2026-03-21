@@ -2,6 +2,9 @@ const router = require('express').Router();
 const { query } = require('../db/pool');
 const { auth, adminOnly } = require('../middleware/auth');
 
+// Only super_admin can view/add/edit/delete doctors
+const superAdminOnly = adminOnly(['super_admin']);
+
 const DOC_SELECT = `
   SELECT d.*,
     w.ward_number,
@@ -13,8 +16,8 @@ const DOC_SELECT = `
   LEFT JOIN cities c ON c.id = d.city_id
 `;
 
-// GET /api/doctors?cityId=1&q=Verma
-router.get('/', auth, async (req, res) => {
+// GET /api/doctors?cityId=1&q=Verma  — super_admin only
+router.get('/', auth, superAdminOnly, async (req, res) => {
   try {
     const { cityId, q = '' } = req.query;
     const like = `%${q}%`;
@@ -30,8 +33,8 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// GET /api/doctors/:id
-router.get('/:id', auth, async (req, res) => {
+// GET /api/doctors/:id  — super_admin only
+router.get('/:id', auth, superAdminOnly, async (req, res) => {
   try {
     const { rows } = await query(`${DOC_SELECT} WHERE d.id=$1`, [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'Doctor not found' });
@@ -41,8 +44,8 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
-// POST /api/doctors  — admin adds a doctor
-router.post('/', auth, adminOnly(), async (req, res) => {
+// POST /api/doctors  — super_admin only
+router.post('/', auth, superAdminOnly, async (req, res) => {
   try {
     const { name, qualification, specialization, clinicName, address,
       mobile, email, wardId, nigamId, cityId, timings, is24hr } = req.body;
@@ -64,8 +67,8 @@ router.post('/', auth, adminOnly(), async (req, res) => {
   }
 });
 
-// PUT /api/doctors/:id  — admin edits a doctor
-router.put('/:id', auth, adminOnly(), async (req, res) => {
+// PUT /api/doctors/:id  — super_admin only
+router.put('/:id', auth, superAdminOnly, async (req, res) => {
   try {
     const { name, qualification, specialization, clinicName, address,
       mobile, email, timings, is24hr, isAvailable } = req.body;
@@ -84,8 +87,8 @@ router.put('/:id', auth, adminOnly(), async (req, res) => {
   }
 });
 
-// DELETE /api/doctors/:id  — admin removes a doctor
-router.delete('/:id', auth, adminOnly(), async (req, res) => {
+// DELETE /api/doctors/:id  — super_admin only
+router.delete('/:id', auth, superAdminOnly, async (req, res) => {
   try {
     await query('UPDATE doctors SET is_available=false WHERE id=$1', [req.params.id]);
     res.json({ success: true });
