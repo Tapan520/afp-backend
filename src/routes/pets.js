@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { query } = require('../db/pool');
 const { auth, adminOnly } = require('../middleware/auth');
+const { upload } = require('../middleware/upload');
 
 const PET_SELECT = `
   SELECT p.*,
@@ -184,6 +185,66 @@ router.patch('/:id/renew', auth, async (req, res) => {
     res.json(rows[0]);
   } catch (err) {
     res.status(500).json({ error: 'Renewal failed' });
+  }
+});
+
+// POST /api/pets/:id/upload-photo  — upload pet photo
+router.post('/:id/upload-photo', auth, upload.single('photo'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    
+    const photoUrl = `/uploads/pets/${req.file.filename}`;
+    const { rows } = await query(
+      'UPDATE pets SET photo_url=$1, updated_at=NOW() WHERE id=$2 AND owner_id=$3 RETURNING *',
+      [photoUrl, req.params.id, req.user.id]
+    );
+    
+    if (!rows.length) return res.status(404).json({ error: 'Pet not found or not authorized' });
+    res.json({ message: 'Photo uploaded successfully', pet: rows[0] });
+  } catch (err) {
+    console.error('Photo upload error:', err);
+    res.status(500).json({ error: 'Photo upload failed' });
+  }
+});
+
+// POST /api/pets/:id/upload-certificate  — upload vaccination certificate
+router.post('/:id/upload-certificate', auth, upload.single('certificate'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    
+    const certUrl = `/uploads/certificates/${req.file.filename}`;
+    const { rows } = await query(
+      'UPDATE pets SET certificate_url=$1, updated_at=NOW() WHERE id=$2 AND owner_id=$3 RETURNING *',
+      [certUrl, req.params.id, req.user.id]
+    );
+    
+    if (!rows.length) return res.status(404).json({ error: 'Pet not found or not authorized' });
+    res.json({ message: 'Certificate uploaded successfully', pet: rows[0] });
+  } catch (err) {
+    console.error('Certificate upload error:', err);
+    res.status(500).json({ error: 'Certificate upload failed' });
+  }
+});
+
+// POST /api/pets/upload-files  — upload photo and certificate during registration
+router.post('/upload-files', auth, upload.fields([
+  { name: 'photo', maxCount: 1 },
+  { name: 'certificate', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    const files = {};
+    
+    if (req.files['photo']) {
+      files.photoUrl = `/uploads/pets/${req.files['photo'][0].filename}`;
+    }
+    if (req.files['certificate']) {
+      files.certificateUrl = `/uploads/certificates/${req.files['certificate'][0].filename}`;
+    }
+    
+    res.json({ message: 'Files uploaded successfully', files });
+  } catch (err) {
+    console.error('File upload error:', err);
+    res.status(500).json({ error: 'File upload failed' });
   }
 });
 
