@@ -72,7 +72,7 @@ async function initDB() {
         id SERIAL PRIMARY KEY, pet_id TEXT UNIQUE,
         name TEXT NOT NULL, species TEXT NOT NULL, breed TEXT NOT NULL,
         colour TEXT NOT NULL, gender TEXT NOT NULL, date_of_birth DATE NOT NULL,
-        photo_url TEXT, owner_id INT REFERENCES users(id),
+        photo_url TEXT, certificate_url TEXT, owner_id INT REFERENCES users(id),
         ward_id INT, nigam_id INT, city_id INT,
         registration_status TEXT NOT NULL DEFAULT 'pending'
           CHECK (registration_status IN ('pending','approved','rejected')),
@@ -104,6 +104,9 @@ async function initDB() {
       );
       CREATE INDEX IF NOT EXISTS idx_pets_owner  ON pets(owner_id);
       CREATE INDEX IF NOT EXISTS idx_pets_status ON pets(registration_status);
+      -- Add new columns safely (ignored if already exist)
+      ALTER TABLE pets ADD COLUMN IF NOT EXISTS certificate_url TEXT;
+      ALTER TABLE pets ADD COLUMN IF NOT EXISTS photo_url       TEXT;
       CREATE INDEX IF NOT EXISTS idx_users_mob   ON users(mobile);
     `);
 
